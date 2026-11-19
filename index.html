@@ -82,7 +82,7 @@
 <div id="app" v-cloak class="min-h-screen flex flex-col md:flex-row w-full overflow-x-hidden">
 
   <!-- ========================================== -->
-  <!-- LOG IN PAGE (TEMA HIJAU APPLE) -->
+  <!-- LOG IN PAGE (DROPDOWN NAMA GURU + PASSWORD ADMIN SAHAJA) -->
   <!-- ========================================== -->
   <div v-if="!isLoggedIn" class="min-h-screen w-full green-apple-bg flex items-center justify-center p-4">
     <div class="apple-card p-6 md:p-10 rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
@@ -96,23 +96,37 @@
       </div>
 
       <div class="space-y-6">
+        <!-- DROPDOWN PILIH NAMA GURU -->
         <div>
-          <label class="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider block mb-1">Nama Pengguna</label>
+          <label class="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider block mb-1">Pilih Nama Guru</label>
           <div class="relative">
             <span class="absolute left-2 top-2.5 text-lg">👤</span>
-            <input v-model="loginForm.username" type="text" placeholder="Masukkan ID anda" class="w-full clean-input pl-10 py-2 text-slate-700 font-bold text-base md:text-lg">
+            <select v-model="loginForm.selectedUser" @change="onSelectUser" :disabled="isLoadingData"
+                    class="w-full clean-input pl-10 py-2 text-slate-700 font-bold text-base md:text-lg cursor-pointer">
+              <option :value="null" disabled>
+                {{ isLoadingData ? 'Memuatkan senarai guru...' : '-- Pilih Nama Anda --' }}
+              </option>
+              <option v-for="(u, idx) in validUsers" :key="idx" :value="u">
+                {{ u['Nama Penuh'] }}
+              </option>
+            </select>
           </div>
         </div>
 
-        <div>
-          <label class="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider block mb-1">Kata Laluan</label>
-          <div class="relative">
-            <span class="absolute left-2 top-2.5 text-lg">🔒</span>
-            <input v-model="loginForm.password" @keyup.enter="handleLogin" type="password" placeholder="••••••••" class="w-full clean-input pl-10 py-2 text-slate-700 font-bold text-base md:text-lg">
+        <!-- KATA LALUAN (MUNCUL HANYA BILA ADMIN DIPILIH) -->
+        <transition name="fade">
+          <div v-if="isAdminSelected">
+            <label class="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider block mb-1">Kata Laluan Admin</label>
+            <div class="relative">
+              <span class="absolute left-2 top-2.5 text-lg">🔒</span>
+              <input v-model="loginForm.password" @keyup.enter="handleLogin" type="password" placeholder="Masukkan kata laluan"
+                     class="w-full clean-input pl-10 py-2 text-slate-700 font-bold text-base md:text-lg">
+            </div>
           </div>
-        </div>
+        </transition>
 
-        <button @click="handleLogin" :disabled="isLoadingData" class="w-full green-apple-btn font-bold py-3 md:py-4 rounded-2xl shadow-lg mt-6 flex items-center justify-center text-sm md:text-base tracking-wide disabled:opacity-50">
+        <button @click="handleLogin" :disabled="isLoadingData || !loginForm.selectedUser"
+                class="w-full green-apple-btn font-bold py-3 md:py-4 rounded-2xl shadow-lg mt-6 flex items-center justify-center text-sm md:text-base tracking-wide disabled:opacity-50">
           <span class="mr-2">{{ isLoadingData ? '⏳' : '🚪' }}</span>
           {{ isLoadingData ? 'MEMUATKAN DATA...' : 'LOG MASUK' }}
         </button>
@@ -577,7 +591,7 @@
             <thead class="bg-slate-100 text-slate-500 uppercase text-xs font-bold">
               <tr>
                 <th class="p-3 md:p-4">Username</th>
-                <th class="p-3 md:p-4">Password</th>
+                <th class="p-3 md:p-4">Password (Admin)</th>
                 <th class="p-3 md:p-4">Nama Penuh</th>
                 <th class="p-3 md:p-4">Role</th>
                 <th class="p-3 md:p-4 text-center">Padam</th>
@@ -586,7 +600,7 @@
             <tbody class="divide-y divide-slate-100">
               <tr v-for="(user, idx) in appData.users" :key="idx" class="hover:bg-slate-50">
                 <td class="p-2 md:p-3"><input v-model="user['Username']" type="text" class="w-full bg-white border border-slate-300 px-2 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-slate-800 text-sm"></td>
-                <td class="p-2 md:p-3"><input v-model="user['Password']" type="text" class="w-full bg-white border border-slate-300 px-2 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-slate-800 text-sm"></td>
+                <td class="p-2 md:p-3"><input v-model="user['Password']" type="text" placeholder="(Admin sahaja)" class="w-full bg-white border border-slate-300 px-2 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-slate-800 text-sm"></td>
                 <td class="p-2 md:p-3"><input v-model="user['Nama Penuh']" type="text" class="w-full bg-white border border-slate-300 px-2 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-slate-800 text-sm"></td>
                 <td class="p-2 md:p-3">
                   <select v-model="user['Role']" class="w-full bg-white border border-slate-300 px-2 py-1.5 md:px-4 md:py-2 rounded-xl font-bold text-slate-800 text-sm">
@@ -751,7 +765,10 @@
         currentUser: null,
         currentMenu: 'dashboard',
         
-        loginForm: { username: '', password: '' },
+        loginForm: {
+          selectedUser: null,
+          password: ''
+        },
         loginError: '',
         
         dashboardMinggu: '',
@@ -774,6 +791,13 @@
       }
     },
     computed: {
+      validUsers() {
+        return (this.appData.users || []).filter(u => u['Nama Penuh'] && String(u['Nama Penuh']).trim() !== '');
+      },
+      isAdminSelected() {
+        if (!this.loginForm.selectedUser || !this.loginForm.selectedUser['Role']) return false;
+        return String(this.loginForm.selectedUser['Role']).trim().toLowerCase() === 'admin';
+      },
       currentDate() {
         return new Date().toLocaleDateString('ms-MY', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
       },
@@ -900,7 +924,6 @@
       }
     },
     methods: {
-      // FUNGSI BANTUAN UNTUK PANGGIL POST API APPS SCRIPT (BEBAS RALAT CORS)
       async callGasApi(action, payload = {}) {
         const response = await fetch(SCRIPT_URL, {
           method: 'POST',
@@ -910,7 +933,6 @@
         return await response.json();
       },
 
-      // AMBIL DATA DARI GOOGLE SHEET SEMASA MULA DIBUKA
       async fetchData() {
         this.isLoadingData = true;
         try {
@@ -925,20 +947,40 @@
         }
       },
 
-      handleLogin() {
-        const u = this.appData.users.find(x => x.Username === this.loginForm.username && String(x.Password) === String(this.loginForm.password));
-        if (u) {
-          this.currentUser = Object.assign({}, u, { NamaPenuh: u['Nama Penuh'] });
-          this.isLoggedIn = true;
-          this.loginError = '';
-        } else {
-          this.loginError = 'Nama pengguna atau kata laluan tidak sah.';
-        }
+      onSelectUser() {
+        this.loginForm.password = '';
+        this.loginError = '';
       },
+
+      handleLogin() {
+        const u = this.loginForm.selectedUser;
+        if (!u) {
+          this.loginError = 'Sila pilih nama anda terlebih dahulu.';
+          return;
+        }
+
+        // Hanya minta dan semak kata laluan jika peranan ialah Admin
+        if (this.isAdminSelected) {
+          if (!this.loginForm.password) {
+            this.loginError = 'Sila masukkan kata laluan Admin.';
+            return;
+          }
+          if (String(u.Password) !== String(this.loginForm.password)) {
+            this.loginError = 'Kata laluan Admin tidak sah.';
+            return;
+          }
+        }
+
+        // Guru biasa terus log masuk tanpa kata laluan
+        this.currentUser = Object.assign({}, u, { NamaPenuh: u['Nama Penuh'] });
+        this.isLoggedIn = true;
+        this.loginError = '';
+      },
+
       logout() {
         this.isLoggedIn = false;
         this.currentUser = null;
-        this.loginForm = { username: '', password: '' };
+        this.loginForm = { selectedUser: null, password: '' };
         this.currentMenu = 'dashboard';
         this.isMobileMenuOpen = false;
       },
