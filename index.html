@@ -247,7 +247,9 @@
         </div>
       </transition>
 
+      <!-- ========================================== -->
       <!-- MENU 1: DASHBOARD PEMENANG MINGGUAN -->
+      <!-- ========================================== -->
       <div v-if="currentMenu === 'dashboard'" class="max-w-6xl mx-auto w-full space-y-6">
         
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center apple-card p-6 md:p-8 rounded-3xl">
@@ -285,30 +287,58 @@
             </div>
           </div>
 
-          <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-            <div v-for="(rankInfo, index) in top3Ranking(dashboardMinggu)" :key="index" 
-                 class="relative p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center text-center overflow-hidden border-2 transition-all transform hover:-translate-y-1 shadow-lg"
-                 :class="getRankCardStyle(rankInfo.rank)">
-              
-              <div class="text-5xl md:text-7xl mb-4 drop-shadow-md">
-                <span v-if="rankInfo.rank === 1">🥇</span>
-                <span v-else-if="rankInfo.rank === 2">🥈</span>
-                <span v-else-if="rankInfo.rank === 3">🥉</span>
+          <div v-else class="space-y-8">
+            <!-- PODIUM TOP 3 MINGGUAN -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+              <div v-for="(rankInfo, index) in top3Ranking(dashboardMinggu)" :key="index" 
+                   class="relative p-6 md:p-8 rounded-3xl flex flex-col items-center justify-center text-center overflow-hidden border-2 transition-all transform hover:-translate-y-1 shadow-lg"
+                   :class="getRankCardStyle(rankInfo.rank)">
+                
+                <div class="text-5xl md:text-7xl mb-4 drop-shadow-md">
+                  <span v-if="rankInfo.rank === 1">🥇</span>
+                  <span v-else-if="rankInfo.rank === 2">🥈</span>
+                  <span v-else-if="rankInfo.rank === 3">🥉</span>
+                </div>
+                
+                <h3 class="text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 mb-2">
+                  {{ rankInfo.classes.length > 1 ? 'Tempat Ke-' + rankInfo.rank + ' (Bersama)' : 'Tempat Ke-' + rankInfo.rank }}
+                </h3>
+                
+                <div class="mt-4 space-y-2 md:space-y-3 w-full">
+                  <div v-for="kelasName in rankInfo.classes" :key="kelasName" class="bg-white/80 backdrop-blur py-2 px-4 md:py-3 md:px-5 rounded-2xl font-black text-xl md:text-2xl shadow-sm border border-white text-slate-800">
+                    {{ kelasName }}
+                  </div>
+                </div>
+
+                <div class="mt-6 inline-block bg-slate-900 text-white px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-black shadow-inner">
+                  {{ rankInfo.score }} Markah
+                </div>
               </div>
-              
-              <h3 class="text-xs md:text-sm font-black uppercase tracking-widest text-slate-500 mb-2">
-                {{ rankInfo.classes.length > 1 ? 'Tempat Ke-' + rankInfo.rank + ' (Bersama)' : 'Tempat Ke-' + rankInfo.rank }}
-              </h3>
-              
-              <div class="mt-4 space-y-2 md:space-y-3 w-full">
-                <div v-for="kelasName in rankInfo.classes" :key="kelasName" class="bg-white/80 backdrop-blur py-2 px-4 md:py-3 md:px-5 rounded-2xl font-black text-xl md:text-2xl shadow-sm border border-white text-slate-800">
-                  {{ kelasName }}
+            </div>
+
+            <!-- FUNGSI BAHARU: HANTAR KEPUTUSAN MINGGUAN (WHATSAPP / SALIN TEKS) -->
+            <div class="bg-slate-50 border border-slate-200 rounded-3xl p-5 md:p-6 space-y-4">
+              <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                <div>
+                  <h4 class="text-sm md:text-base font-black text-slate-800 flex items-center">
+                    <span class="mr-2">📢</span> Kongsi Keputusan {{ dashboardMinggu }}
+                  </h4>
+                  <p class="text-xs text-slate-500 font-semibold mt-0.5">Pratonton mesej yang akan dihantar ke WhatsApp guru:</p>
+                </div>
+                <div class="flex flex-wrap gap-2 w-full md:w-auto">
+                  <button @click="hantarWhatsApp(dashboardMinggu)" 
+                          class="flex-1 md:flex-none px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center text-sm">
+                    <span class="mr-2">💬</span> Hantar ke WhatsApp
+                  </button>
+                  <button @click="salinTeksKeputusan(dashboardMinggu)" 
+                          class="flex-1 md:flex-none px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-2xl shadow-md transition-all flex items-center justify-center text-sm">
+                    <span class="mr-2">{{ copiedSuccess ? '✅' : '📋' }}</span>
+                    {{ copiedSuccess ? 'Disalin!' : 'Salin Teks' }}
+                  </button>
                 </div>
               </div>
 
-              <div class="mt-6 inline-block bg-slate-900 text-white px-4 py-1.5 md:px-5 md:py-2 rounded-full text-xs md:text-sm font-black shadow-inner">
-                {{ rankInfo.score }} Markah
-              </div>
+              <pre class="bg-white border border-slate-200 rounded-2xl p-4 text-xs md:text-sm text-slate-700 whitespace-pre-wrap font-medium leading-relaxed shadow-inner">{{ janaTeksKeputusan(dashboardMinggu) }}</pre>
             </div>
           </div>
         </div>
@@ -761,6 +791,7 @@
         isSubmitting: false,
         isResetting: false,
         isMobileMenuOpen: false,
+        copiedSuccess: false,
         notification: '',
         currentUser: null,
         currentMenu: 'dashboard',
@@ -959,7 +990,6 @@
           return;
         }
 
-        // Hanya minta dan semak kata laluan jika peranan ialah Admin
         if (this.isAdminSelected) {
           if (!this.loginForm.password) {
             this.loginError = 'Sila masukkan kata laluan Admin.';
@@ -971,7 +1001,6 @@
           }
         }
 
-        // Guru biasa terus log masuk tanpa kata laluan
         this.currentUser = Object.assign({}, u, { NamaPenuh: u['Nama Penuh'] });
         this.isLoggedIn = true;
         this.loginError = '';
@@ -1086,6 +1115,52 @@
         }
         return result;
       },
+
+      // FUNGSI JANA FORMAT TEKS KEPUTUSAN MINGGUAN
+      janaTeksKeputusan(minggu) {
+        const rankings = this.top3Ranking(minggu);
+        const nomborMinggu = String(minggu).replace(/Minggu\s*/i, '');
+        const r1 = rankings.find(r => r.rank === 1);
+        const r2 = rankings.find(r => r.rank === 2);
+        const r3 = rankings.find(r => r.rank === 3);
+
+        const t1 = r1 ? r1.classes.join(', ') : '-';
+        const t2 = r2 ? r2.classes.join(', ') : '-';
+        const t3 = r3 ? r3.classes.join(', ') : '-';
+
+        return `🔰 *PEMENANG PERTANDINGAN MINGGUAN KECERIAAN KELAS🔰*\n` +
+               `Minggu: ${nomborMinggu}\n` +
+               `Tempat 1🥇: ${t1}\n` +
+               `Tempat 2🥈: ${t2}\n` +
+               `Tempat 3🥉: ${t3}\n\n` +
+               `Assalamualaikum, untuk makluman cikgu. Berikut adalah senarai pemenang bagi kelas bersih dan ceria\n\n` +
+               `*-PENYELARAS 3K (AIMAN)*`;
+      },
+
+      // HANTAR TERUS KE WHATSAPP
+      hantarWhatsApp(minggu) {
+        const teks = this.janaTeksKeputusan(minggu);
+        const url = 'https://wa.me/?text=' + encodeURIComponent(teks);
+        window.open(url, '_blank');
+      },
+
+      // SALIN TEKS KEPUTUSAN KE CLIPBOARD
+      async salinTeksKeputusan(minggu) {
+        const teks = this.janaTeksKeputusan(minggu);
+        try {
+          await navigator.clipboard.writeText(teks);
+        } catch (e) {
+          const ta = document.createElement('textarea');
+          ta.value = teks;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        }
+        this.copiedSuccess = true;
+        setTimeout(() => { this.copiedSuccess = false; }, 2500);
+      },
+
       getRankCardStyle(rank) {
         if (rank === 1) return 'bg-yellow-50/80 border-yellow-300 text-yellow-900';
         if (rank === 2) return 'bg-slate-100/80 border-slate-300 text-slate-800';
